@@ -8,6 +8,8 @@ const pptrFirefox = require('puppeteer-firefox');
 const { error } = require('console');
 require('dotenv').config();
 
+let is_gamestop = false; // checks to see if there is a gamestop url, which is used for creating browser session
+
 /*
 * Main class that represents a generic item
 */
@@ -207,26 +209,25 @@ async function createSet(urls){
     const items = new Map(); // map of items, key is item name, value is Item object
     for(let  i in urls){
         let site = new URL(urls[i]).hostname; // finds the site
-        
+        let temp;
         // if bestbuy
         if(site === 'www.bestbuy.com'){
-            console.log("ligma");
-            let temp = new BestBuy(urls[i]); // creates Bestbuy Object
+            temp = new BestBuy(urls[i]); // creates Bestbuy Object
             await temp.init().catch(err => console.error(err)); 
             items.set(temp.getName(), temp);
         // if walmart
         }else if(site === 'www.walmart.com'){
-            let temp = new Walmart(urls[i]); // creates Walmart object
+            temp = new Walmart(urls[i]); // creates Walmart object
             await temp.init().catch(err => console.error());
             items.set(temp.getName(), temp);
         
         // if gamestop
         }else if(site === 'www.gamestop.com'){
-            let temp = new Gamestop(urls[i]); // creates Gamestop object
+            is_gamestop = true;
+            temp = new Gamestop(urls[i]); // creates Gamestop object
             await temp.init().catch(err=> console.error(err));
             items.set(temp.getName(), temp);
         }
-
         console.log("Initialized: "+temp.getName());
     }
 
@@ -243,16 +244,19 @@ async function createSet(urls){
  */
 async function checkAllStatus(items){
     // infinite loops that repeatedly checks to see if the item is instock
-    browser = await pptrFirefox.launch();
-    const page = await browser.newPage();
+    let page;
+    if(is_gamestop){
+        browser = await pptrFirefox.launch();
+        page = await browser.newPage();
+    }
     while(true){
-        for(let value of Object.values(items)){
+        for(let [key,value] of items){
             if( value instanceof Gamestop){ 
                 await value.checkStatus(page);
                 value.sendWebhook();
             }else{
                 await value.checkStatus();
-                value.sendWebhook();
+                await value.sendWebhook();
             }
         }
         await sleep(5000);
@@ -272,19 +276,13 @@ function sleep(ms) {
 
     // reads the the config file and gets an Array of urls
     const urls = readFile();
-    
-    
+
     // creates set of items
     const items = await createSet(urls).catch(function (error){
         if(error.response){
             console.log("ERROR STATUS: "+error.response.status);
         }
     });
-
-    if(items === undefined){
-        console.log("undefined");
-        return process.exit(0);
-    }
 
     //debugging
 
@@ -301,6 +299,8 @@ function sleep(ms) {
                 await value.browser.close();
             }
         }
+        return process.exit(0);
+
     }
 
 })();
