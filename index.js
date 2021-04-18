@@ -1,3 +1,11 @@
+/**
+ * index.js is the main file that controls everything
+ * It reads in a file of urls and then creates objects based on each site
+ * Then it loops indefinetly and checks to see if the item is in stock
+ * If it's instock it will send a Discord webhook to the webhook mentioned in the .env file
+ */
+
+
 const fs = require('fs');
 const bestbuy = require('./bestbuy');
 const walmart = require('./walmart');
@@ -253,10 +261,8 @@ async function checkAllStatus(items){
         for(let [key,value] of items){
             if( value instanceof Gamestop){ 
                 await value.checkStatus(page);
-                value.sendWebhook();
             }else{
                 await value.checkStatus();
-                await value.sendWebhook();
             }
         }
         await sleep(5000);
@@ -284,11 +290,9 @@ function sleep(ms) {
         }
     });
 
-    //debugging
-
     // calls method that loops and repeatedly checks to see if the item is in stock
     try{
-        checkAllStatus(items);
+        await checkAllStatus(items);
     }catch (error){
         console.error(error);
         return process.exit(0);

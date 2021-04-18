@@ -1,3 +1,7 @@
+/**
+ * Bestbuy module gets info about product and checks in stock using requests through axios and then uses cheerio to parse html
+ */
+
 const axios = require('axios');
 const cheerio = require('cheerio');
 
@@ -44,8 +48,6 @@ async function getPrice(url){
     else{
         return price.substring(1);
     }
-    
-    
 }
 
 /**
@@ -59,17 +61,5 @@ async function getImage(url){
     let image = $('.primary-image').attr('src');
     return image
 }
-
-// test urls
-//let url = 'https://www.bestbuy.com/site/razer-blackwidow-v3-pro-wireless-mechanical-gaming-keyboard-black/6425357.p?skuId=6425357';
-//let url = 'https://www.bestbuy.com/site/sony-playstation-5-console/6426149.p?skuId=6426149';
-//let url = 'https://www.bestbuy.com/site/nvidia-geforce-rtx-3060-ti-8gb-gddr6-pci-express-4-0-graphics-card-steel-and-black/6439402.p?skuId=6439402';
-
-/* test main function
-(async () =>{
-    console.log( await getPrice(url));
-})(); 
-*/
-
 
 module.exports = {getName, getPrice, checkStatus, getImage};

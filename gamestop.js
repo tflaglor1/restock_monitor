@@ -1,5 +1,8 @@
-const cheerio = require('cheerio');
+/**
+ * Gamestop module uses Puppeteer to get the site and then cheerio to parse html to find info about item
+ */
 
+const cheerio = require('cheerio');
 const { Puppeteer } = require('puppeteer');
 const pptrFirefox = require('puppeteer-firefox');
 const { Browser } = require('puppeteer-firefox/lib/api');
@@ -67,43 +70,5 @@ function getImage(url){
     temp = temp[temp.length-1].split('.')[0];
     return img + temp;
 }
-
-// @TODO make an init function that combines all the get price and name stuff
-
-//test urls
-//let url = "https://www.gamestop.com/video-games/playstation-4/games/products/mlb-the-show-21/11112941.html";
-//let url2 = 'https://www.gamestop.com/video-games/playstation-5/consoles/products/playstation-5/11108140.html';
-//let url = 'https://www.gamestop.com/video-games/nintendo-switch/games/products/just-dance-2021/11107484.html';
-
-/*
-Used for testing
-
-(async ()=>{
-    let browser;
-    try{
-        browser = await pptrFirefox.launch();
-        const page = await browser.newPage();
-        
-        let status;
-        status = await checkStatus(url, page);
-        console.log(status);
-        status = await checkStatus(url2, page);
-        console.log(status);
-        let name = await getName(url, page);
-        console.log(name);
-        let price = await getPrice(url2, page);
-        console.log(price);
-        
-        let img = getImage(url);
-        console.log(img);
-
-    }catch (error){
-        console.error(error);
-    }finally{
-        await browser.close();
-    }
-
-})();
-*/
 
 module.exports = {getName, getPrice, checkStatus, getImage, getBrowser};

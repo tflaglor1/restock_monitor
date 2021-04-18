@@ -1,7 +1,7 @@
 # restock_monitor
 ## Notes
-Currently the BestBuy module works fully and is the only suggested site to use.
-Walmart ges blocked by captcha quickly so not recommend, and Gamestop is super slow.
+Currently the BestBuy module works fully and Gamestop module which are the only suggested sites to use.
+Walmart gets blocked by captcha quickly so it's not recommended. Discord webhooks are only sent if the item was previously out of stock and then went back in stock.
 ## Setup Instructions
 Create a `.env` file with:
 
@@ -11,6 +11,7 @@ With the proper Discord Webhook URL
 
 In the `config.txt` file you add the urls to links you want to monitor:
 
-	random_url,
+	random_url
+	random_url2
 
-Must have comma after if multiple, then enter to next line. The final line does not need a comma
+Must have one url per line, and you can add as much as you want
