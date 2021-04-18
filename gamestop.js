@@ -1,22 +1,32 @@
-const axios = require('axios');
 const cheerio = require('cheerio');
+
 const { Puppeteer } = require('puppeteer');
 const pptrFirefox = require('puppeteer-firefox');
+const { Browser } = require('puppeteer-firefox/lib/api');
 
 /**
  * Checks to see if the item is instock or not
  * @param {String} url 
- * @param {puppeteer-firefox} browser
+ * @param {puppeteer-firefox} page
  * @return boolean: true instock or false in stock 
  */
 async function checkStatus(url, page){
-    await page.goto(url);
-    const content = await page.content();
-    $ = cheerio.load(content);
-    let temp = $('[class="add-to-cart-buttons tulsa-atcbutton-toggle"]').find("button").text();
-    let status = temp === 'Add to CartAdd to Cart' || temp === 'Pre-OrderPre-Order';
-    return status;
+    
+    try{
+        await page.goto(url);
+        const content = await page.content();
+        $ = cheerio.load(content);
+        let temp = $('[class="add-to-cart-buttons tulsa-atcbutton-toggle"]').find("button").text();
+        let status = temp === 'Add to CartAdd to Cart' || temp === 'Pre-OrderPre-Order';
+        return status;
+    }catch (error){
+        throw error;
+    }
 } 
+
+async function getBrowser(){
+    return await pptrFirefox.launch();
+}
 
 /**
  * Gets the name of the item
@@ -95,3 +105,5 @@ Used for testing
 
 })();
 */
+
+module.exports = {getName, getPrice, checkStatus, getImage, getBrowser};

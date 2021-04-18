@@ -1,7 +1,12 @@
 const fs = require('fs');
 const bestbuy = require('./bestbuy');
 const walmart = require('./walmart');
+const gamestop = require('./gamestop');
 const webhook = require('webhook-discord');
+const { Puppeteer } = require('puppeteer');
+const pptrFirefox = require('puppeteer-firefox');
+const { error } = require('console');
+require('dotenv').config();
 
 /*
 * Main class that represents a generic item
@@ -36,7 +41,7 @@ class Item {
     }
 
     async sendWebhook(){
-        // need to hide webhook
+
         const hook = new webhook.Webhook(process.env.WEBHOOK_URL);
         const msg = new webhook.MessageBuilder()
             .setName('STOCK CHECKER')
@@ -52,7 +57,7 @@ class Item {
     }
     
     /**
-     * Checks to see if in stock status changed
+     * Checks to see if stock status changed
      * @param {bool} tempStatus 
      */
     checkNewStatus(tempStatus){
@@ -66,7 +71,9 @@ class Item {
 
 }
 
-// child of Item that represents Bestbuy
+/**
+ * child of Item that represents Bestbuy
+ */
 class BestBuy extends Item{
 
     constructor(url){
@@ -99,7 +106,9 @@ class BestBuy extends Item{
 
 }
 
-// child of item that represents Walmart
+/**
+ * child of item that represents Walmart
+ */
 class Walmart extends Item{
     constructor(url){
         super(url);
@@ -131,12 +140,58 @@ class Walmart extends Item{
 }
 
 /**
+ * child of Item that represents Gamestop
+ */
+class Gamestop extends Item{
+    constructor(url){
+        super(url);
+        this.browser;
+        this.page;
+    }
+
+    // initializes the object name, price, and image
+    async init(){
+        try{
+            this.browser = await pptrFirefox.launch();
+            this.page = await this.browser.newPage();
+            await this.setName(this.page);
+            await this.setPrice(this.page);
+            await this.setImage();
+        }catch{
+            throw error;
+        }
+    }
+    // sets name
+    async setName(temp_page){
+        this.name = await gamestop.getName(this.url, temp_page);
+    }
+    // sets price
+    async setPrice(temp_page){
+        this.price = await gamestop.getPrice(this.url, temp_page);
+    }
+    // sets image
+    async setImage(){
+        this.image = gamestop.getImage(this.url);
+    }
+    // checks if in stock or not
+    async checkStatus(temp_page){
+        try{
+            let tempStatus = await gamestop.checkStatus(this.url, temp_page);
+            this.checkNewStatus(tempStatus); // checks if status changed
+        }catch (error){
+            throw error;
+        }
+    }
+
+}
+
+/**
  * Reads in the file line by line and returns an Array of string of that data
  */
 function readFile(){
     try{
         const data = fs.readFileSync('config.txt','UTF-8');
-        return data.split(',\r\n');
+        return data.split("\n"); // fixed byb changing from ",\r\n"
 
 }   catch (err){
         console.error(err);
@@ -149,23 +204,36 @@ function readFile(){
  * @return map of items (key: item Name, value: Item object)
  */
 async function createSet(urls){
-    let items = new Map(); // map of items, key is item name, value is Item object
+    const items = new Map(); // map of items, key is item name, value is Item object
     for(let  i in urls){
         let site = new URL(urls[i]).hostname; // finds the site
+        
         // if bestbuy
         if(site === 'www.bestbuy.com'){
+            console.log("ligma");
             let temp = new BestBuy(urls[i]); // creates Bestbuy Object
-             await temp.init(); 
+            await temp.init().catch(err => console.error(err)); 
             items.set(temp.getName(), temp);
-            
         // if walmart
         }else if(site === 'www.walmart.com'){
             let temp = new Walmart(urls[i]); // creates Walmart object
             await temp.init().catch(err => console.error());
             items.set(temp.getName(), temp);
-            
+        
+        // if gamestop
+        }else if(site === 'www.gamestop.com'){
+            let temp = new Gamestop(urls[i]); // creates Gamestop object
+            await temp.init().catch(err=> console.error(err));
+            items.set(temp.getName(), temp);
         }
+
+        console.log("Initialized: "+temp.getName());
     }
+
+    for(let value of Object.values(items)){
+        console.log(value);
+    }
+    
     return items; // returns map
 }
 /**
@@ -175,9 +243,17 @@ async function createSet(urls){
  */
 async function checkAllStatus(items){
     // infinite loops that repeatedly checks to see if the item is instock
+    browser = await pptrFirefox.launch();
+    const page = await browser.newPage();
     while(true){
-        for(let [key,value] of items){
-            await value.checkStatus();
+        for(let value of Object.values(items)){
+            if( value instanceof Gamestop){ 
+                await value.checkStatus(page);
+                value.sendWebhook();
+            }else{
+                await value.checkStatus();
+                value.sendWebhook();
+            }
         }
         await sleep(5000);
     }
@@ -191,27 +267,13 @@ function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-/* temp urls for testing
-let url1 = 'https://www.bestbuy.com/site/razer-blackwidow-v3-pro-wireless-mechanical-gaming-keyboard-black/6425357.p?skuId=6425357';
-let url2 = 'https://www.walmart.com/ip/John-Wick-Blu-ray-DVD/40712445';
-*/
-
 // main function
 (async () =>{
 
-    /*
-    let bestbuyTest = new BestBuy(url1);
-    await bestbuyTest.init();
-    bestbuyTest.checkStatus(bestbuyTest.url);
-    
-    let walmartTest = new Walmart(url2);
-    await walmartTest.init();
-    console.log(walmartTest);
-    */
-
     // reads the the config file and gets an Array of urls
     const urls = readFile();
-
+    
+    
     // creates set of items
     const items = await createSet(urls).catch(function (error){
         if(error.response){
@@ -219,12 +281,26 @@ let url2 = 'https://www.walmart.com/ip/John-Wick-Blu-ray-DVD/40712445';
         }
     });
 
+    if(items === undefined){
+        console.log("undefined");
+        return process.exit(0);
+    }
+
+    //debugging
+
     // calls method that loops and repeatedly checks to see if the item is in stock
-    checkAllStatus(items);
+    try{
+        checkAllStatus(items);
+    }catch (error){
+        console.error(error);
+        return process.exit(0);
+    }finally{
+        for(let value of Object.values(items)){
+            
+            if(value instanceof Gamestop){
+                await value.browser.close();
+            }
+        }
+    }
 
 })();
-
-
-/*
- RUNNING INTO CAPTCHA ON WALMART FOR SOME reASON
-*/
